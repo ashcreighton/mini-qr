@@ -190,6 +190,36 @@ describe('rasterizeSvg', () => {
     }
   })
 
+  it('rasterises a background hole (evenodd path) as real alpha=0 transparency, not a colour fill', async () => {
+    // The whole point of punching the hole via an evenodd background <path>
+    // instead of hiding dots alone: the exported PNG must have an actual
+    // transparent window there (alpha 0), not just "no dots drawn on top of
+    // an opaque background" — otherwise a see-through logo would still show
+    // the QR's background colour behind it once printed/composited.
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="50" height="50">
+      <path class="qr-bg" fill-rule="evenodd" fill="#0000ff" d="M0,0H50V50H0Z M15,25A10,10 0 1 0 35,25A10,10 0 1 0 15,25Z"/>
+    </svg>`
+    const blob = await rasterizeSvg({
+      svgString: svg,
+      width: 100,
+      height: 100,
+      mimeType: 'image/png'
+    })
+    const bitmap = await createImageBitmap(blob)
+    const canvas = document.createElement('canvas')
+    canvas.width = bitmap.width
+    canvas.height = bitmap.height
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(bitmap, 0, 0)
+
+    const hole = ctx.getImageData(50, 50, 1, 1).data // centre of the punched circle
+    expect(hole[3]).toBe(0) // fully transparent
+
+    const filled = ctx.getImageData(5, 5, 1, 1).data // corner, outside the hole
+    expect(filled[3]).toBe(255)
+    expect(filled[2]).toBeGreaterThan(200) // blue background
+  })
+
   it('still produces a blob when the centre logo URL fails to load', async () => {
     const blob = await rasterizeSvg({
       svgString: SVG_WITH_BROKEN_LOGO,

@@ -1,6 +1,6 @@
 import { fromLegacyOptions } from './legacy-adapter'
 import { renderFramed } from './frame'
-import { renderQrFragment, escapeAttr } from './render/svg'
+import { renderQrFragment, buildBackgroundFragment, escapeAttr } from './render/svg'
 import type { Options as LegacyOptions } from './legacy-types'
 import type { FrameConfig, QRCodeConfig, ResolvedQRCodeConfig, TextPosition } from './types'
 import { DEFAULT_CONFIG } from './types'
@@ -102,14 +102,16 @@ function renderStandalone(
     size,
     background: { color: 'transparent' }
   }
-  const { fragment } = renderQrFragment(fragmentConfig)
+  const { fragment, imageHole } = renderQrFragment(fragmentConfig)
 
   const clipId = 'qr-export-clip'
   const usesClip = radius > 0
+  // fragmentConfig forced background to transparent above (so the fragment's
+  // own qr-bg can't peek past this rounded clip), which means renderQrFragment
+  // never punched a logo hole into it either — do that here instead, onto the
+  // rect that's actually visible.
   const bgRect =
-    bgColor && bgColor !== 'transparent'
-      ? `<rect x="0" y="0" width="${size}" height="${size}" fill="${escapeAttr(bgColor)}"/>`
-      : ''
+    bgColor && bgColor !== 'transparent' ? buildBackgroundFragment(size, bgColor, imageHole) : ''
   const defs = usesClip
     ? `<defs><clipPath id="${clipId}"><rect x="0" y="0" width="${size}" height="${size}" rx="${radius}" ry="${radius}"/></clipPath></defs>`
     : ''

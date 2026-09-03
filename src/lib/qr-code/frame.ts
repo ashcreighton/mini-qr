@@ -170,14 +170,25 @@ export function renderFramed(config: ResolvedQRCodeConfig): FramedSvg {
 }
 
 function liftImage(fragment: string, dx: number, dy: number): { fragment: string; image: string } {
-  const match = fragment.match(/<image\b[^>]*\/>/)
+  // The circle-shaped logo carries a preceding <defs><clipPath>...<circle
+  // cx cy.../></clipPath></defs> (see render/svg.ts). clipPath geometry with
+  // the default clipPathUnits="userSpaceOnUse" resolves in the coordinate
+  // system of whichever element *references* it via clip-path — so once the
+  // <image> is lifted out of the translated <g> below, its circle must move
+  // by the same (dx,dy) or the clip ends up offset from the now-relocated
+  // image (visible as the logo clipping to a circle in the wrong spot, or
+  // seemingly not clipping the visible logo at all).
+  const match = fragment.match(/(<defs>.*?<\/defs>)?(<image\b[^>]*\/>)/s)
   if (!match) return { fragment, image: '' }
-  const adjusted = match[0]
+  const defsBlock = (match[1] ?? '')
+    .replace(/\bcx="([\d.]+)"/, (_, v) => `cx="${parseFloat(v) + dx}"`)
+    .replace(/\bcy="([\d.]+)"/, (_, v) => `cy="${parseFloat(v) + dy}"`)
+  const adjustedImage = match[2]
     .replace(/\bx="([\d.]+)"/, (_, v) => `x="${parseFloat(v) + dx}"`)
     .replace(/\by="([\d.]+)"/, (_, v) => `y="${parseFloat(v) + dy}"`)
   return {
     fragment: fragment.replace(match[0], ''),
-    image: adjusted
+    image: defsBlock + adjustedImage
   }
 }
 

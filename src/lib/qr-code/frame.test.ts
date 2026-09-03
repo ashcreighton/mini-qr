@@ -52,6 +52,46 @@ describe('renderFramed', () => {
     expect(height).toBeGreaterThan(200) // caption pushes height
   })
 
+  describe('centre logo clip-path survives being lifted out of the translated group', () => {
+    // The centre logo (and its circle clipPath, when shape='circle') is lifted
+    // out of the QR's translated <g> for the raster-export sandbox workaround
+    // (see liftImage's comment in frame.ts). clipPath geometry resolves in the
+    // *referencing* element's coordinate system, so once the <image> moves to
+    // the outer, untranslated space, its clip circle must move by the same
+    // (qrX, qrY) offset or it clips nothing near the now-relocated logo.
+    it('offsets the lifted clipPath circle by the same amount as the lifted image', () => {
+      const { svg } = renderFramed({
+        ...baseConfig('bottom'),
+        image: { href: 'logo.png', sizeRatio: 0.4, shape: 'circle' }
+      })
+
+      const imageTag = svg.match(/<image class="qr-logo"[^>]*\/>/)?.[0]
+      const circleTag = svg.match(/<circle cx="[\d.]+" cy="[\d.]+" r="[\d.]+"\/>/)?.[0]
+      expect(imageTag).toBeDefined()
+      expect(circleTag).toBeDefined()
+
+      const imgX = Number(imageTag!.match(/\bx="([\d.]+)"/)![1])
+      const imgY = Number(imageTag!.match(/\by="([\d.]+)"/)![1])
+      const imgW = Number(imageTag!.match(/\bwidth="([\d.]+)"/)![1])
+      const cx = Number(circleTag!.match(/\bcx="([\d.]+)"/)![1])
+      const cy = Number(circleTag!.match(/\bcy="([\d.]+)"/)![1])
+
+      // The circle must be centred on the (now absolute-coordinate) image box,
+      // not offset from it — confirms the clipPath moved with the image
+      // rather than staying behind in the translated group's coordinate space.
+      expect(cx).toBeCloseTo(imgX + imgW / 2, 1)
+      expect(cy).toBeCloseTo(imgY + imgW / 2, 1)
+
+      // Both the <image> and the <circle> must sit outside/after the
+      // translated <g> — i.e. actually lifted, not left behind inside it.
+      const gCloseIdx = svg.indexOf('</g>')
+      const imageIdx = svg.indexOf(imageTag!)
+      const circleIdx = svg.indexOf(circleTag!)
+      expect(imageIdx).toBeGreaterThan(gCloseIdx)
+      expect(circleIdx).toBeGreaterThan(gCloseIdx)
+    })
+  })
+
   describe('frame background image', () => {
     const BG_HREF = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg=='
 

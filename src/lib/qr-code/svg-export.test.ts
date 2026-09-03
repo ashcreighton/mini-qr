@@ -58,6 +58,29 @@ describe('buildSvgExportString frame plumbing', () => {
   })
 })
 
+describe('logo background hole survives the standalone (no-frame) export path', () => {
+  // renderStandalone deliberately strips background from the inner fragment
+  // (so its straight-cornered qr-bg can't peek past the outer rounded clip)
+  // and draws its own separate outer rect instead — that separate rect must
+  // still get the hole, or a business-card SVG download would silently lose
+  // the transparent window a framed/live-preview render would show.
+  it('punches the logo hole into the outer background rect, not just the (stripped) inner one', () => {
+    const svg = buildSvgExportString({
+      options: {
+        data: 'https://example.com',
+        width: 200,
+        height: 200,
+        image: 'logo.png',
+        imageOptions: { imageSize: 0.4, shape: 'circle' }
+      },
+      outerBackground: '#ffffff',
+      size: { width: 200, height: 200 }
+    })
+    expect(svg).toContain('fill-rule="evenodd"')
+    expect(svg).toMatch(/<path[^>]*d="M0,0H200V200H0Z M[\d.]+,[\d.]+A/)
+  })
+})
+
 describe('quiet-zone default (#308)', () => {
   it('omitting margin defaults to the ISO/IEC 18004 minimum of 4 modules', () => {
     const omitted = buildSvgExportString({ options: { data: 'https://example.com' } })

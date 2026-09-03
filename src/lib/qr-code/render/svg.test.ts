@@ -74,6 +74,56 @@ describe('renderQrFragment + wrapAsSvg', () => {
     expect(fragment).toContain('fill="#fffaee"')
   })
 
+  it('uses a plain <rect> background when there is no logo (no hole to punch)', () => {
+    const { fragment, imageHole } = renderQrFragment(
+      baseConfig({ background: { color: '#ffffff' } })
+    )
+    expect(fragment).toContain('<rect class="qr-bg"')
+    expect(imageHole).toBeUndefined()
+  })
+
+  it('punches a real hole in the background behind a transparent logo, not just a colour fill', () => {
+    // The point: hiding QR dots under the logo isn't enough — a logo PNG with
+    // its own transparent background must reveal genuinely open space, not
+    // the QR's background colour, or a see-through logo looks like it's
+    // sitting on a solid disc instead of open card stock.
+    const { fragment, imageHole } = renderQrFragment(
+      baseConfig({
+        background: { color: '#ffffff' },
+        image: { href: 'logo.png', sizeRatio: 0.4, shape: 'circle' }
+      })
+    )
+    expect(fragment).not.toContain('<rect class="qr-bg"')
+    expect(fragment).toContain('<path class="qr-bg" fill-rule="evenodd"')
+    expect(imageHole).toEqual({
+      x: expect.any(Number),
+      y: expect.any(Number),
+      size: expect.any(Number),
+      shape: 'circle'
+    })
+  })
+
+  it('punches a square hole (not just circle) when shape is square', () => {
+    const { imageHole } = renderQrFragment(
+      baseConfig({
+        background: { color: '#ffffff' },
+        image: { href: 'logo.png', sizeRatio: 0.4 } // shape omitted → default square
+      })
+    )
+    expect(imageHole?.shape).toBe('square')
+  })
+
+  it('does not punch a hole when hideBackgroundDots is explicitly false', () => {
+    const { fragment, imageHole } = renderQrFragment(
+      baseConfig({
+        background: { color: '#ffffff' },
+        image: { href: 'logo.png', sizeRatio: 0.4, shape: 'circle', hideBackgroundDots: false }
+      })
+    )
+    expect(fragment).toContain('<rect class="qr-bg"')
+    expect(imageHole).toBeUndefined()
+  })
+
   it('omits the background rect for transparent backgrounds', () => {
     const { fragment } = renderQrFragment(baseConfig({ background: { color: 'transparent' } }))
     expect(fragment).not.toContain('class="qr-bg"')
