@@ -14,6 +14,7 @@ interface ImageOverlay {
   y: number
   width: number
   height: number
+  shape: 'square' | 'circle'
 }
 
 /**
@@ -78,13 +79,21 @@ async function drawOverlay(
 ): Promise<void> {
   try {
     const logo = await loadOverlayImage(overlay.href)
-    ctx.drawImage(
-      logo,
-      overlay.x * scaleX,
-      overlay.y * scaleY,
-      overlay.width * scaleX,
-      overlay.height * scaleY
-    )
+    const x = overlay.x * scaleX
+    const y = overlay.y * scaleY
+    const w = overlay.width * scaleX
+    const h = overlay.height * scaleY
+    if (overlay.shape === 'circle') {
+      ctx.save()
+      ctx.beginPath()
+      ctx.arc(x + w / 2, y + h / 2, Math.min(w, h) / 2, 0, Math.PI * 2)
+      ctx.closePath()
+      ctx.clip()
+      ctx.drawImage(logo, x, y, w, h)
+      ctx.restore()
+    } else {
+      ctx.drawImage(logo, x, y, w, h)
+    }
   } catch (err) {
     console.warn('QR logo failed to load for raster export, skipping:', err)
   }
@@ -155,9 +164,10 @@ function extractImageOverlay(svg: string): { svg: string; overlay: ImageOverlay 
     const width = parseNumberAttr(attrs, 'width', 0)
     const height = parseNumberAttr(attrs, 'height', 0)
     if (width <= 0 || height <= 0) continue
+    const shape = readAttr(attrs, 'data-shape') === 'circle' ? 'circle' : 'square'
     return {
       svg: svg.replace(attrs, ''),
-      overlay: { href, x, y, width, height }
+      overlay: { href, x, y, width, height, shape }
     }
   }
   return { svg, overlay: null }

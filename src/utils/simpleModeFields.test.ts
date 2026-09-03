@@ -17,6 +17,7 @@ describe('simple mode field registry', () => {
       [
         'preset',
         'logoImage',
+        'logoShape',
         'logoBackground',
         'backgroundColor',
         'dotsColor',

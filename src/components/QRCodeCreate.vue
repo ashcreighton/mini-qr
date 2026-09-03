@@ -251,6 +251,7 @@ const margin = ref()
 const showMarginHint = ref(false)
 const imageMargin = ref()
 const imageSize = ref<number | undefined>()
+const imageShape = ref<'square' | 'circle'>('square')
 
 watch(
   () => props.initialData,
@@ -308,7 +309,8 @@ const style = computed(() => ({
 }))
 const imageOptions = computed(() => ({
   margin: imageMargin.value,
-  imageSize: imageSize.value
+  imageSize: imageSize.value,
+  shape: imageShape.value
 }))
 // Capped below 1: past ~0.5 the render pipeline's own scannability safety
 // cap (see computeImagePlacement's SAFE_MAX_AXIS_FRACTION) already clamps the
@@ -581,6 +583,7 @@ function applySelectedPresetToState() {
   margin.value = preset.margin
   imageMargin.value = preset.imageOptions.margin
   imageSize.value = preset.imageOptions.imageSize
+  imageShape.value = preset.imageOptions.shape === 'circle' ? 'circle' : 'square'
   dotsOptionsColor.value = preset.dotsOptions.color
   dotsOptionsType.value = preset.dotsOptions.type
   cornersSquareOptionsColor.value = preset.cornersSquareOptions.color
@@ -2469,6 +2472,18 @@ const updateDataFromModal = (newData: string) => {
                   v-model="image"
                 />
               </div>
+              <fieldset class="field-reveal flex-1" v-show="isFieldVisible('logoShape')">
+                <legend>{{ t('Logo shape') }}</legend>
+                <div class="radio" v-for="shape in ['square', 'circle']" :key="shape">
+                  <input
+                    :id="'imageShape-' + shape"
+                    type="radio"
+                    v-model="imageShape"
+                    :value="shape"
+                  />
+                  <label :for="'imageShape-' + shape">{{ t(shape) }}</label>
+                </div>
+              </fieldset>
               <div
                 class="field-reveal flex flex-row items-center gap-2"
                 v-show="isFieldVisible('logoBackground')"

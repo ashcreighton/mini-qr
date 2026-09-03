@@ -31,6 +31,7 @@ export const SIMPLE_MODE_FIELD_GROUPS: SimpleFieldGroup[] = [
     fields: [
       { key: 'preset', labelKey: 'Preset' },
       { key: 'logoImage', labelKey: 'Logo image URL' },
+      { key: 'logoShape', labelKey: 'Logo shape' },
       { key: 'logoBackground', labelKey: 'With background' },
       { key: 'backgroundColor', labelKey: 'Background color' },
       { key: 'dotsColor', labelKey: 'Dots color' },

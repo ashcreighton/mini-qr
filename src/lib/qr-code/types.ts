@@ -23,12 +23,16 @@ export interface BackgroundConfig {
   color?: string
 }
 
+export type ImageShape = 'square' | 'circle'
+
 export interface ImageConfig {
   href: string
   sizeRatio?: number
   margin?: number
   hideBackgroundDots?: boolean
   crossOrigin?: 'anonymous' | 'use-credentials'
+  /** Mask shape for the logo itself and the dots hidden underneath it. Defaults to 'square'. */
+  shape?: ImageShape
 }
 
 export interface FrameConfig {

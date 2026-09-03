@@ -48,6 +48,26 @@ describe('renderQrFragment + wrapAsSvg', () => {
     expect(fragment).toContain('href="https://example.com/logo.png"')
   })
 
+  it('does not clip the logo when shape is square (default)', () => {
+    const { fragment } = renderQrFragment(
+      baseConfig({ image: { href: 'https://example.com/logo.png', sizeRatio: 0.3 } })
+    )
+    expect(fragment).not.toContain('clip-path')
+    expect(fragment).toContain('data-shape="square"')
+  })
+
+  it('clips the logo to a circle when shape is circle', () => {
+    const { fragment } = renderQrFragment(
+      baseConfig({
+        image: { href: 'https://example.com/logo.png', sizeRatio: 0.3, shape: 'circle' }
+      })
+    )
+    expect(fragment).toContain('data-shape="circle"')
+    expect(fragment).toContain('<clipPath id="qr-logo-clip">')
+    expect(fragment).toContain('<circle ')
+    expect(fragment).toContain('clip-path="url(#qr-logo-clip)"')
+  })
+
   it('respects background.color when set to a concrete value', () => {
     const { fragment } = renderQrFragment(baseConfig({ background: { color: '#fffaee' } }))
     expect(fragment).toContain('class="qr-bg"')

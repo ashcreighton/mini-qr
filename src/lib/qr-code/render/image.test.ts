@@ -55,3 +55,42 @@ describe('computeImagePlacement safety cap (#309)', () => {
     expect(placement.size).toBe(11)
   })
 })
+
+describe('circle logo shape', () => {
+  it('defaults to the square mask when no shape is given', () => {
+    const { count } = buildMatrix('https://a.co', 'Q')
+    const placement = computeImagePlacement({
+      image: { href: 'logo.png', sizeRatio: 0.4 },
+      count,
+      moduleSize: 1,
+      offset: 0,
+      totalSize: count,
+      errorCorrectionLevel: 'Q'
+    })
+    // A corner of the bounding box is hidden under the square mask...
+    expect(placement.hidesCell(0, 0)).toBe(false) // well outside the box
+    const centre = Math.floor(count / 2)
+    const half = Math.floor((placement.size - 1) / 2)
+    expect(placement.hidesCell(centre - half, centre - half)).toBe(true)
+  })
+
+  it('hides a circular region, leaving the mask box corners untouched', () => {
+    const { count } = buildMatrix('https://a.co', 'Q')
+    const placement = computeImagePlacement({
+      image: { href: 'logo.png', sizeRatio: 0.4, shape: 'circle' },
+      count,
+      moduleSize: 1,
+      offset: 0,
+      totalSize: count,
+      errorCorrectionLevel: 'Q'
+    })
+    const centre = Math.floor(count / 2)
+    const half = Math.floor((placement.size - 1) / 2)
+    // Dead centre is always hidden.
+    expect(placement.hidesCell(centre, centre)).toBe(true)
+    // The far corner of the bounding square (radius*sqrt(2) away) sits
+    // outside the inscribed circle and must stay visible — this is exactly
+    // the "square peeking behind the circle" case the circle shape fixes.
+    expect(placement.hidesCell(centre - half, centre - half)).toBe(false)
+  })
+})

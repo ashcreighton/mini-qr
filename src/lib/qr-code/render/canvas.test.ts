@@ -79,6 +79,43 @@ describe('rasterizeSvg', () => {
     expect(b).toBeLessThan(40)
   })
 
+  it('clips an external centre logo to a circle when data-shape="circle" is set', async () => {
+    // External (non-data:) hrefs go through extractImageOverlay + drawOverlay
+    // in canvas.ts, a separate code path from the SVG <image>'s own clip-path
+    // — this exercises that manual ctx.clip() branch specifically.
+    const redBlob = await (await fetch(makeSolidPngDataUri('#ff0000'))).blob()
+    const redUrl = URL.createObjectURL(redBlob)
+    try {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 50 50" width="50" height="50">
+        <rect x="0" y="0" width="50" height="50" fill="#0000ff"/>
+        <image href="${redUrl}" x="15" y="15" width="20" height="20" data-shape="circle"/>
+      </svg>`
+      const blob = await rasterizeSvg({
+        svgString: svg,
+        width: 100,
+        height: 100,
+        mimeType: 'image/png'
+      })
+      const bitmap = await createImageBitmap(blob)
+      const canvas = document.createElement('canvas')
+      canvas.width = bitmap.width
+      canvas.height = bitmap.height
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(bitmap, 0, 0)
+      // Logo bounding box is canvas (30,30)..(70,70), centre (50,50).
+      const centre = ctx.getImageData(50, 50, 1, 1).data
+      expect(centre[0]).toBeGreaterThan(200) // red
+      expect(centre[2]).toBeLessThan(40)
+      // Bounding-box corner (31,31) sits outside the inscribed circle — must
+      // stay the blue background, not the red square logo.
+      const corner = ctx.getImageData(31, 31, 1, 1).data
+      expect(corner[2]).toBeGreaterThan(200) // blue
+      expect(corner[0]).toBeLessThan(40)
+    } finally {
+      URL.revokeObjectURL(redUrl)
+    }
+  })
+
   it('accounts for parent <g transform="translate(...)"> when placing the logo', async () => {
     // Simulates the framed layout: QR fragment (with <image>) wrapped in a
     // translate group, then the whole thing inside a larger outer SVG.

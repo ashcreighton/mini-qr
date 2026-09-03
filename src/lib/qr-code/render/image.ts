@@ -89,6 +89,25 @@ export function computeImagePlacement(input: PlacementInput): ImagePlacement {
 
   const centreModule = (count - 1) / 2
   const half = (maxAxisDots - 1) / 2
+
+  if (image.shape === 'circle') {
+    // Only hide modules within the inscribed circle, not the whole bounding
+    // square — otherwise a circular logo leaves blank square corners showing
+    // through behind it whenever the QR background isn't plain white.
+    const radius = half
+    return {
+      x,
+      y,
+      size: imageSizeInPx,
+      margin: marginPx,
+      hidesCell: (r: number, c: number) => {
+        const dr = r - centreModule
+        const dc = c - centreModule
+        return dr * dr + dc * dc <= radius * radius
+      }
+    }
+  }
+
   const minR = Math.floor(centreModule - half)
   const maxR = Math.ceil(centreModule + half)
   const minC = minR

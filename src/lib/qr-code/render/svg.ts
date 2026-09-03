@@ -102,10 +102,25 @@ export function renderQrFragment(config: ResolvedQRCodeConfig): {
       const crossOrigin = config.image.crossOrigin
         ? ` crossorigin="${config.image.crossOrigin}"`
         : ''
+      const shape = config.image.shape ?? 'square'
+      // Fixed id, not per-instance: matches the existing convention for
+      // 'frame-bg-clip' / 'qr-export-clip' elsewhere in this file — each export
+      // renders one detached SVG at a time, so document-wide uniqueness never
+      // comes up in practice.
+      const clipId = 'qr-logo-clip'
+      let clipDefs = ''
+      let clipAttr = ''
+      if (shape === 'circle') {
+        const cx = innerX + innerSize / 2
+        const cy = innerY + innerSize / 2
+        const r = innerSize / 2
+        clipDefs = `<defs><clipPath id="${clipId}"><circle cx="${cx}" cy="${cy}" r="${r}"/></clipPath></defs>`
+        clipAttr = ` clip-path="url(#${clipId})"`
+      }
       parts.push(
-        `<image class="qr-logo" href="${escapeAttr(config.image.href)}" xlink:href="${escapeAttr(
+        `${clipDefs}<image class="qr-logo" href="${escapeAttr(config.image.href)}" xlink:href="${escapeAttr(
           config.image.href
-        )}" x="${innerX}" y="${innerY}" width="${innerSize}" height="${innerSize}" preserveAspectRatio="xMidYMid meet"${crossOrigin}/>`
+        )}" x="${innerX}" y="${innerY}" width="${innerSize}" height="${innerSize}" preserveAspectRatio="xMidYMid meet" data-shape="${shape}"${clipAttr}${crossOrigin}/>`
       )
     }
   }
