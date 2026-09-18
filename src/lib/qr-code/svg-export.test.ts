@@ -58,13 +58,13 @@ describe('buildSvgExportString frame plumbing', () => {
   })
 })
 
-describe('logo background hole survives the standalone (no-frame) export path', () => {
-  // renderStandalone deliberately strips background from the inner fragment
-  // (so its straight-cornered qr-bg can't peek past the outer rounded clip)
-  // and draws its own separate outer rect instead — that separate rect must
-  // still get the hole, or a business-card SVG download would silently lose
-  // the transparent window a framed/live-preview render would show.
-  it('punches the logo hole into the outer background rect, not just the (stripped) inner one', () => {
+describe('logo sits on the same fill as the rest of the QR in the standalone (no-frame) export path', () => {
+  // renderStandalone strips background from the inner fragment (so its
+  // straight-cornered qr-bg can't peek past the outer rounded clip) and draws
+  // its own separate outer rect instead. That outer rect should just be a
+  // plain fill — the logo's clear zone isn't a special transparent cutout,
+  // it gets the same background colour as everywhere else.
+  it('draws a plain outer background rect, with no hole punched behind the logo', () => {
     const svg = buildSvgExportString({
       options: {
         data: 'https://example.com',
@@ -76,8 +76,8 @@ describe('logo background hole survives the standalone (no-frame) export path', 
       outerBackground: '#ffffff',
       size: { width: 200, height: 200 }
     })
-    expect(svg).toContain('fill-rule="evenodd"')
-    expect(svg).toMatch(/<path[^>]*d="M0,0H200V200H0Z M[\d.]+,[\d.]+A/)
+    expect(svg).toContain('<rect x="0" y="0" width="200" height="200" fill="#ffffff"/>')
+    expect(svg).not.toContain('fill-rule="evenodd" fill="#ffffff"')
   })
 })
 

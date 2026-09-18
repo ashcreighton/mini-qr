@@ -11,13 +11,6 @@ export interface RenderedQR {
   matrixCount: number
 }
 
-export interface ImageHole {
-  x: number
-  y: number
-  size: number
-  shape: 'square' | 'circle'
-}
-
 const SVG_NS = 'http://www.w3.org/2000/svg'
 const XLINK_NS = 'http://www.w3.org/1999/xlink'
 
@@ -30,9 +23,6 @@ export function renderQrFragment(config: ResolvedQRCodeConfig): {
   fragment: string
   size: number
   matrixCount: number
-  /** Centre-logo hole, in the same coordinate space as `fragment` — only set
-   *  when a background was actually punched (see buildBackgroundFragment). */
-  imageHole?: ImageHole
 } {
   const effectiveEcLevel = resolveEffectiveErrorCorrectionLevel(
     Boolean(config.image),
@@ -56,24 +46,18 @@ export function renderQrFragment(config: ResolvedQRCodeConfig): {
       })
     : undefined
 
-  // Hiding dots under the logo isn't enough on its own — the background rect
-  // still fully covers that area, so a transparent-background logo shows the
-  // QR's background colour behind it instead of true empty space. Punch a
-  // real hole (square or circle, matching the dot-hiding mask exactly) so a
-  // logo without its own opaque backing sits in genuinely open space, not a
-  // solid disc — same shape either way, not just for circle (#circle-hole).
-  const imageHole: ImageHole | undefined =
-    placement && (config.image?.hideBackgroundDots ?? true)
-      ? {
-          x: placement.x,
-          y: placement.y,
-          size: placement.size,
-          shape: config.image?.shape ?? 'square'
-        }
-      : undefined
-
+  // Whether the centre logo sits in genuinely open space or on the QR's own
+  // background colour is now entirely up to that colour: transparent
+  // background means nothing is drawn behind it at all (open space, for
+  // free); a solid colour fills straight through, logo area included, so a
+  // "with background" QR reads as one consistent surface rather than having
+  // an always-punched hole regardless of that setting.
   if (config.background.color && config.background.color !== 'transparent') {
-    parts.push(buildBackgroundFragment(config.size, config.background.color, imageHole))
+    parts.push(
+      `<rect class="qr-bg" x="0" y="0" width="${config.size}" height="${config.size}" fill="${escapeAttr(
+        config.background.color
+      )}"/>`
+    )
   }
 
   const dotsPath = buildDotsPath({
@@ -147,34 +131,7 @@ export function renderQrFragment(config: ResolvedQRCodeConfig): {
     }
   }
 
-  return { fragment: parts.join(''), size: config.size, matrixCount: count, imageHole }
-}
-
-/**
- * Background rect for the QR canvas. When `hole` is given, cuts that shape
- * out via an evenodd path instead of a plain `<rect>` — same trick already
- * used for qr-dots/qr-corner-square — so the area behind a transparent-logo
- * PNG is genuinely open (no fill), not just free of dots.
- */
-export function buildBackgroundFragment(size: number, color: string, hole?: ImageHole): string {
-  if (!hole) {
-    return `<rect class="qr-bg" x="0" y="0" width="${size}" height="${size}" fill="${escapeAttr(color)}"/>`
-  }
-  const outer = `M0,0H${size}V${size}H0Z`
-  return `<path class="qr-bg" fill-rule="evenodd" fill="${escapeAttr(color)}" d="${outer} ${buildHolePath(hole)}"/>`
-}
-
-function buildHolePath(hole: ImageHole): string {
-  const { x, y, size, shape } = hole
-  if (shape === 'circle') {
-    const cx = x + size / 2
-    const cy = y + size / 2
-    const r = size / 2
-    // Two-arc circle: fill-rule=evenodd only cares about crossing parity, so
-    // arc sweep direction relative to the outer rect doesn't matter here.
-    return `M${cx - r},${cy}A${r},${r} 0 1 0 ${cx + r},${cy}A${r},${r} 0 1 0 ${cx - r},${cy}Z`
-  }
-  return `M${x},${y}H${x + size}V${y + size}H${x}Z`
+  return { fragment: parts.join(''), size: config.size, matrixCount: count }
 }
 
 /**
